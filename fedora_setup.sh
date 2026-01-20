@@ -70,6 +70,12 @@ c_setup(){
     dnf install gdb valgrind systemtap ltrace strace -y
 }
 
+dotnet_setup(){
+    # https://learn.microsoft.com/en-us/dotnet/core/install/linux-fedora
+    dnf install dotnet-sdk-10.0
+    dnf install aspnetcore-runtime-10.0
+}
+
 java_setup(){
     echo "Not implemented yet..."
 }
@@ -209,6 +215,7 @@ read_choice() {
 software_submenu() {
     while true; do
         echo "${PRINT_PREFIX}Software Installation Menu:"
+        
         echo "1) Install all software"
         echo "2) Install Visual Studio Code"
         echo "3) Install multimedia codecs"
@@ -240,6 +247,7 @@ dev_setup_submenu() {
         echo "1) Back to Main Menu"
         echo "2) Setup all"
         echo "3) Setup C/C++"
+        echo "4) Setup .Net/C#"
         # echo "4)"
         # echo "5)"
         # echo "6)"
@@ -254,6 +262,7 @@ dev_setup_submenu() {
             1) break ;;  # break the submenu loop and return to main
             2) 
                 c_setup
+                dotnet_setup
                 # java_setup
                 # python_setup
                 # haskell_setup
@@ -261,7 +270,7 @@ dev_setup_submenu() {
                 # node_setup
                 ;;
             3) c_setup ;;
-            # 4) ;;
+            4) dotnet_setup ;;
             # 5) ;;
             # 6) ;;
             # 7) ;;
