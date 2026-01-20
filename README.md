@@ -40,6 +40,7 @@ sudo ./fedora_setup.sh
 
 ### Development Tools
 - **C/C++ environment**: Installs development-tools group, clang, gdb, valgrind, and debugging utilities
+- **.Net / C# environment**: Installs .NET SDK 10.0 and ASP.NET Core Runtime 10.0
 - More to come...
 
 ## Extending the Script
