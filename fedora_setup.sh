@@ -41,7 +41,7 @@ declare -A DEV_TOOLS=(
 
 run_dnf() {
     # wrapper around the dnf command that adds error handling and logging
-    echo "${PRINT_PREFIX}Running: dnf $*"
+    echo "${PRINT_PREFIX}Running: \"dnf $*\"..."
     if ! dnf "$@"; then
         echo "${PRINT_PREFIX}ERROR: dnf command failed: $*" >&2
         return 1
@@ -84,9 +84,12 @@ init() {
 }
 
 update() {
+    echo ""
     echo "${PRINT_PREFIX}Updating system packages..."
     run_dnf update -y --refresh
+    echo ""
     run_dnf upgrade -y
+    echo ""
     echo "${PRINT_PREFIX}System packages were updated! You might need to restart for updates to be completed."
 }
 
@@ -96,19 +99,22 @@ install_dnf_packages_from_file() {
     local package_file="$script_dir/dnf_packages"
 
     if [[ ! -f "$package_file" ]]; then
+        echo ""
         echo "${PRINT_PREFIX}Package file not found: $package_file"
         return 1
     fi
 
+    echo ""
     echo "${PRINT_PREFIX}Installing packages from $package_file..."
 
     while IFS= read -r package || [[ -n "$package" ]]; do
         if [[ -n "$package" && ! "$package" =~ ^# ]]; then
-            echo "${PRINT_PREFIX}Installing $package..."
+            echo ""
             run_dnf install -y "$package"
         fi
     done < "$package_file"
 
+    echo ""
     echo "${PRINT_PREFIX}All packages from $package_file have been installed."
 }
 
@@ -116,33 +122,46 @@ install_flatpaks_from_file() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local flatpak_file="$script_dir/flatpaks"
+    local failed_flatpaks=()
 
     if [[ ! -f "$flatpak_file" ]]; then
         echo "${PRINT_PREFIX}Flatpak file not found: $flatpak_file"
         return 1
     fi
 
+    echo ""
     echo "${PRINT_PREFIX}Installing Flatpaks from $flatpak_file..."
     
     while IFS= read -r line || [[ -n "$line" ]]; do
-        # Trim leading/trailing whitespace
         line="$(echo "$line" | xargs)"
 
-        # Ignore comments and empty lines
         if [[ -n "$line" && ! "$line" =~ ^# ]]; then
+            echo ""
             echo "${PRINT_PREFIX}Installing $line..."
+            
             if flatpak install -y flathub "$line"; then
                 echo "${PRINT_PREFIX}$line installed successfully."
             else
                 echo "${PRINT_PREFIX}Failed to install $line — continuing with next."
+                failed_flatpaks+=("$line")
             fi
         fi
     done < "$flatpak_file"
 
-    echo "${PRINT_PREFIX}All Flatpaks from $flatpak_file have been installed."
+    echo "${SEPARATOR_THIN}"
+    # Check if the failure list is empty or not
+    if [[ ${#failed_flatpaks[@]} -eq 0 ]]; then
+        echo "${PRINT_PREFIX}All Flatpaks installed successfully!"
+    else
+        echo "${PRINT_PREFIX}The following packages failed to install:"
+        for failed in "${failed_flatpaks[@]}"; do
+            echo "  - $failed"
+        done
+    fi
 }
 
 install_nvidia_drivers() {
+    echo ""
     echo "${PRINT_PREFIX}Checking for NVIDIA GPU..."
     if lspci | grep -i "nvidia" > /dev/null; then
         echo "${PRINT_PREFIX}NVIDIA GPU detected. Installing drivers..."
@@ -159,7 +178,7 @@ install_nvidia_drivers() {
 # =============================================================================
 
 multimedia_setup() {
-    echo "${PRINT_PREFIX}Installing multimedia codecs..."
+    echo ""
     run_dnf group install multimedia -y
     # TODO: https://rpmfusion.org/Howto/Multimedia
 }
@@ -194,7 +213,6 @@ EOF
 }
 
 install_tailscale() {
-    echo "${PRINT_PREFIX}Installing Tailscale..."
     dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
     run_dnf install tailscale -y
     systemctl enable --now tailscaled
@@ -258,7 +276,6 @@ show_submenu() {
         echo "$SEPARATOR_THICK"
         echo "${menu_title}:"
         echo "$SEPARATOR_THICK"
-        echo "0) Back to Main Menu"
         echo "1) Install/Setup all"
 
         local -a display_keys=()
@@ -270,7 +287,10 @@ show_submenu() {
             display_keys[$index]="$key"
             ((index++))
         done < <(printf '%s\n' "${!menu_map[@]}" | sort)
-                
+        echo "${SEPARATOR_THIN}"
+        echo "0) Back to Main Menu"
+        echo "${SEPARATOR_THICK}"
+      
         local max_choice=$((index - 1))
         local choice
 
@@ -279,6 +299,7 @@ show_submenu() {
         if [[ "$choice" == "1" ]]; then
             echo "${PRINT_PREFIX}Running all installations..."
             for key in "${!menu_map[@]}"; do
+                echo ""
                 echo "${PRINT_PREFIX}Running: $key"
                 ${menu_map[$key]}
             done
@@ -286,6 +307,7 @@ show_submenu() {
             
         elif [[ "$choice" -ge 1 && "$choice" -lt "$index" ]]; then
             local selected_key="${display_keys[$choice]}"
+            echo ""
             echo "${PRINT_PREFIX}Running: $selected_key"
             ${menu_map[$selected_key]}
             
@@ -310,22 +332,29 @@ dev_setup_submenu() {
 show_menu() {
     echo ""
     echo "$SEPARATOR_THICK"
-    echo "Main Menu - Please select an option:"
+    echo "Main Menu - Select an option:"
     echo "$SEPARATOR_THICK"
-    echo "0) Exit"
-    echo "1) Update system packages"
-    echo "2) Install DNF packages from \"dnf_packages\" file"
-    echo "3) Install Flatpaks from \"flatpaks\" file"
-    echo "4) Software Installation Menu"
-    echo "5) Dev Tools Setup Menu"
-    echo "6) Install Nvidia drivers"
-}
 
+    echo " 1) Update System"
+    echo " 2) Install DNF Packages"
+    echo " 3) Install Flatpaks"
+    echo " 4) Software Submenu"
+    echo " 5) Dev Setup Submenu"
+    echo " 6) Install NVIDIA Drivers"
+
+    echo "$SEPARATOR_THIN"
+    echo " 0) Exit"
+    echo "$SEPARATOR_THICK"
+}
 read_choice() {
     local choice
     read -rp "Enter your choice [0-6]: " choice
     case $choice in
-        0) echo "${PRINT_PREFIX}Exiting."; exit 0 ;;
+        0) 
+            echo ""; 
+            echo "${PRINT_PREFIX}Exiting."; 
+            echo ""; 
+            exit 0 ;;
         1) update ;;
         2) install_dnf_packages_from_file ;;
         3) install_flatpaks_from_file ;;
