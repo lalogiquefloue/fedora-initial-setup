@@ -25,6 +25,7 @@ declare -A SOFTWARE_INSTALLERS=(
 declare -A DEV_TOOLS=(
     ["C/C++"]="c_setup"
     [".NET/C#"]="dotnet_setup"
+    ["Racket"]="racket_setup"
 
     # TODO...
     # ["Go"]="go_setup"
@@ -241,6 +242,19 @@ dotnet_setup() {
     echo "${PRINT_PREFIX}Installing .NET SDK and ASP.NET Core Runtime..."
     run_dnf install dotnet-sdk-10.0 -y
     run_dnf install aspnetcore-runtime-10.0 -y
+}
+
+racket_setup() {
+    echo "${PRINT_PREFIX}Installing Racket and DrRacket IDE..."
+    run_dnf install -y racket
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database /usr/share/applications
+    fi
+
+    echo "${PRINT_PREFIX}Racket installation complete."
+    racket --version
+    command -v drracket
 }
 
 # java_setup() {
